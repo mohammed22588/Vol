@@ -1,6 +1,4 @@
-import time
-print("WebSocket Wait 10 Secand")
-time.sleep(0)
+from flask import Flask
 import threading
 import json
 import websocket
@@ -8,14 +6,19 @@ import time
 import Eqution as Eq
 import Volu1 as Vol
 
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "WebSocket is running!"
+
 def on_open(ws):
     try:
         print("Opened connection WebSocket Start...")
-        SUBSCRIBE = {"method": "SUBSCRIBE","params":["!ticker@arr"],"id": 1}
+        SUBSCRIBE = {"method": "SUBSCRIBE", "params": ["!ticker@arr"], "id": 1}
         ws.send(json.dumps(SUBSCRIBE))
     except Exception as massgge:
         print(massgge)
-
 
 def on_message(ws, message):
     data = json.loads(message)
@@ -36,15 +39,23 @@ def on_message(ws, message):
     for t in threads:
         t.join()
 
+def start_websocket():
+    url = "wss://stream.binance.com:9443/ws"
+    ws = websocket.WebSocketApp(url, on_open=on_open, on_message=on_message)
+    while True:
+        try:
+            ws.run_forever()
+        except KeyboardInterrupt:
+            print("Interrupted by user.")
+            break
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+            time.sleep(5)
 
-url = "wss://stream.binance.com:9443/ws"
-ws = websocket.WebSocketApp(url,on_open=on_open,on_message=on_message)
-while True:
-    try:
-        ws.run_forever()
-    except KeyboardInterrupt:
-        print("Interrupted by user.")
-        break
-    except Exception as e:
-        print(f"Unexpected error: {e}")
-        time.sleep(5)
+if __name__ == "__main__":
+    # بدء WebSocket في ثريد منفصل
+    websocket_thread = threading.Thread(target=start_websocket)
+    websocket_thread.start()
+
+    # بدء Flask على المنفذ 8000
+    app.run(host="0.0.0.0", port=8000)
